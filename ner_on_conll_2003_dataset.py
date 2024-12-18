@@ -13,12 +13,10 @@ Original file is located at
 !pip install accelerate
 !apt install git-lfs
 
-"""You will need to setup git, adapt your email and name in the following cell."""
+"""Setup git"""
 
 !git config --global user.email "egbewaleyanmife@gmail.com"
 !git config --global user.name "Yanmi01"
-
-"""You will also need to be logged in to the Hugging Face Hub. Execute the following and enter your credentials."""
 
 from huggingface_hub import notebook_login
 
