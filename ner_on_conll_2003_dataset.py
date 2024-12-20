@@ -63,24 +63,6 @@ for word, label in zip(words, labels):
 print(line1)
 print(line2)
 
-# you can also try:
-index = 5  # Change this to process a different sentence
-
-# Extract the sentence (tokens and tags) from the dataset
-example = raw_datasets["train"][index]
-tokens = example["tokens"]  # Words or subwords in the sentence
-ner_tags = example["ner_tags"]  # Integer NER tags
-
-# Map numeric NER tags to IOB-format strings
-label_names = ['O', 'B-PER', 'I-PER', 'B-ORG', 'I-ORG', 'B-LOC', 'I-LOC', 'B-MISC', 'I-MISC']
-iob_tags = [label_names[tag] for tag in ner_tags]
-
-# Display the tokens and their corresponding tags
-print(f"{'Token':<15}{'NER Tag'}")
-print("-" * 25)
-for token, iob_tag in zip(tokens, iob_tags):
-    print(f"{token:<15}{iob_tag}")
-
 from transformers import AutoTokenizer
 
 model_checkpoint = "bert-base-cased"
@@ -213,21 +195,6 @@ args = TrainingArguments(
     push_to_hub=True,
 )
 
-from transformers import Trainer
-
-trainer = Trainer(
-    model=model,
-    args=args,
-    train_dataset=tokenized_datasets["train"],
-    eval_dataset=tokenized_datasets["validation"],
-    data_collator=data_collator,
-    compute_metrics=compute_metrics,
-    tokenizer=tokenizer,
-)
-trainer.train()
-
-trainer.push_to_hub(commit_message="Training complete")
-
 from torch.utils.data import DataLoader
 
 train_dataloader = DataLoader(
@@ -240,26 +207,23 @@ eval_dataloader = DataLoader(
     tokenized_datasets["validation"], collate_fn=data_collator, batch_size=8
 )
 
-model = AutoModelForTokenClassification.from_pretrained(
-    model_checkpoint,
-    id2label=id2label,
-    label2id=label2id,
-)
-
 from torch.optim import AdamW
 
 optimizer = AdamW(model.parameters(), lr=2e-5)
+
+import torch
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 from accelerate import Accelerator
 
 accelerator = Accelerator()
 model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
-    model, optimizer, train_dataloader, eval_dataloader
+    model.to(device), optimizer, train_dataloader, eval_dataloader
 )
 
 from transformers import get_scheduler
 
-num_train_epochs = 3
+num_train_epochs = 15
 num_update_steps_per_epoch = len(train_dataloader)
 num_training_steps = num_train_epochs * num_update_steps_per_epoch
 
@@ -272,11 +236,11 @@ lr_scheduler = get_scheduler(
 
 from huggingface_hub import Repository, get_full_repo_name
 
-model_name = "bert-finetuned-ner-accelerate"
+model_name = "bert-finetuned-ner"
 repo_name = get_full_repo_name(model_name)
 repo_name
 
-output_dir = "bert-finetuned-ner-accelerate"
+output_dir = "bert-finetune-ner"
 repo = Repository(output_dir, clone_from=repo_name)
 
 def postprocess(predictions, labels):
@@ -353,10 +317,10 @@ unwrapped_model.save_pretrained(output_dir, save_function=accelerator.save)
 
 from transformers import pipeline
 
-# Replace this with your own checkpoint
-model_checkpoint = "huggingface-course/bert-finetuned-ner"
+# checkpoint
+model_checkpoint = "Yanmife/bert-finetuned-ner"
 token_classifier = pipeline(
     "token-classification", model=model_checkpoint, aggregation_strategy="simple"
 )
-token_classifier("My name is Sylvain and I work at Hugging Face in Brooklyn.")
+token_classifier("My name is Yanmife Egbewale and I am looking to be an AI intern at Data Science Nigeria, Yaba, Lagos, Nigeria")
 
